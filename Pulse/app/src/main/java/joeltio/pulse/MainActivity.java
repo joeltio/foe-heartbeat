@@ -1,20 +1,23 @@
 package joeltio.pulse;
 
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.MenuItem;
 import android.view.SurfaceView;
 import android.view.WindowManager;
-import android.widget.TextView;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Vector;
 
 public class MainActivity extends AppCompatActivity implements
         CameraBridgeViewBase.CvCameraViewListener2 {
@@ -75,9 +78,13 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    Mat mRgba;
+    Mat mRgbaF;
+
     @Override
     public void onCameraViewStarted(int width, int height) {
-
+        mRgba = new Mat(height, width, CvType.CV_8UC4);
+        mRgbaF = new Mat(height, width, CvType.CV_8UC3);
     }
 
     @Override
@@ -85,8 +92,23 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
+    private List<Mat> getGreyScale(Mat channel) {
+        return Arrays.asList(channel, channel, channel);
+    }
+
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        return inputFrame.rgba();
+        mRgba = inputFrame.rgba();
+        Imgproc.resize(mRgba.t(), mRgbaF, mRgba.size());
+        Core.flip(mRgbaF, mRgba, 1);
+
+        List<Mat> planes = new Vector<>();
+        Core.split(mRgba, planes);
+        Mat redChannel = planes.get(0);
+
+        List<Mat> greyScale = Arrays.asList(redChannel, redChannel, redChannel);
+        Core.merge(greyScale, mRgba);
+
+        return mRgba;
     }
 }
