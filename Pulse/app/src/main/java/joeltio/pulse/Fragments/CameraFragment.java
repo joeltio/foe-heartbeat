@@ -84,7 +84,7 @@ public class CameraFragment extends OpenCVFragment {
         this.brightnessMean = (TextView) getActivity().findViewById(R.id.brightness_mean);
 
         this.openCvCameraView =
-                (CameraBridgeViewBase) getActivity().findViewById(R.id.camera_view);
+                (CameraBridgeViewBase) getActivity().findViewById(R.id.camera_camera_view);
         this.openCvCameraView.setVisibility(SurfaceView.VISIBLE);
         this.openCvCameraView.setCvCameraViewListener(this);
     }
