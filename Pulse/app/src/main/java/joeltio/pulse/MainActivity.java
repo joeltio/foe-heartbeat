@@ -1,8 +1,11 @@
 package joeltio.pulse;
 
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.SurfaceView;
 import android.view.WindowManager;
 
@@ -19,26 +22,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Vector;
 
-public class MainActivity extends AppCompatActivity implements
-        CameraBridgeViewBase.CvCameraViewListener2 {
-    private static final String TAG = "OpenCV:MainActivity";
+import joeltio.pulse.Fragments.CameraFragment;
+import joeltio.pulse.Fragments.GraphFragment;
+import joeltio.pulse.Fragments.StatisticsFragment;
 
-    private CameraBridgeViewBase mOpenCvCameraView;
-    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
-        @Override
-        public void onManagerConnected(int status) {
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS:
-                    Log.i(TAG, "OpenCV Loaded Successfully.");
-                    mOpenCvCameraView.enableView();
-                    break;
-                default:
-                    super.onManagerConnected(status);
-                    break;
-            }
-        }
-    };
-
+public class MainActivity extends AppCompatActivity
+        implements BottomNavigationView.OnNavigationItemSelectedListener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,69 +35,45 @@ public class MainActivity extends AppCompatActivity implements
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_main);
 
-        mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.camera_view);
-        mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
-        mOpenCvCameraView.setCvCameraViewListener(this);
-    }
+        BottomNavigationView bottomNavigationView = (BottomNavigationView)
+                findViewById(R.id.navigation);
+        bottomNavigationView.setOnNavigationItemSelectedListener(this);
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (!OpenCVLoader.initDebug()) {
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, this, mLoaderCallback);
-            Log.e(TAG, "Internal OpenCV Lib not found.");
-        } else {
-            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        if (savedInstanceState == null) {
+            bottomNavigationView.setSelectedItemId(R.id.navigation_camera);
         }
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
-        if (mOpenCvCameraView != null) {
-            mOpenCvCameraView.disableView();
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        switch (id) {
+            case R.id.navigation_camera:
+                CameraFragment cameraFragment = new CameraFragment();
+                getFragmentManager().beginTransaction().replace(
+                        R.id.content,
+                        cameraFragment,
+                        cameraFragment.getTag()
+                ).commit();
+                return true;
+            case R.id.navigation_graph:
+                GraphFragment graphFragment = new GraphFragment();
+                getFragmentManager().beginTransaction().replace(
+                        R.id.content,
+                        graphFragment,
+                        graphFragment.getTag()
+                ).commit();
+                return true;
+            case R.id.navigation_statistics:
+                StatisticsFragment statisticsFragment = new StatisticsFragment();
+                getFragmentManager().beginTransaction().replace(
+                        R.id.content,
+                        statisticsFragment,
+                        statisticsFragment.getTag()
+                ).commit();
+                return true;
         }
-    }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (mOpenCvCameraView != null) {
-            mOpenCvCameraView.disableView();
-        }
-    }
-
-    Mat mRgba;
-    Mat mRgbaF;
-
-    @Override
-    public void onCameraViewStarted(int width, int height) {
-        mRgba = new Mat(height, width, CvType.CV_8UC4);
-        mRgbaF = new Mat(height, width, CvType.CV_8UC3);
-    }
-
-    @Override
-    public void onCameraViewStopped() {
-
-    }
-
-    private List<Mat> getGreyScale(Mat channel) {
-        return Arrays.asList(channel, channel, channel);
-    }
-
-    @Override
-    public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        mRgba = inputFrame.rgba();
-        Imgproc.resize(mRgba.t(), mRgbaF, mRgba.size());
-        Core.flip(mRgbaF, mRgba, 1);
-
-        List<Mat> planes = new Vector<>();
-        Core.split(mRgba, planes);
-        Mat redChannel = planes.get(0);
-
-        List<Mat> greyScale = Arrays.asList(redChannel, redChannel, redChannel);
-        Core.merge(greyScale, mRgba);
-
-        return mRgba;
+        return false;
     }
 }

@@ -2,17 +2,17 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
-        android:id="@+id/navigation_home"
+        android:id="@+id/navigation_camera"
         android:icon="@drawable/ic_camera_black_24dp"
         android:title="@string/title_camera" />
 
     <item
-        android:id="@+id/navigation_dashboard"
+        android:id="@+id/navigation_graph"
         android:icon="@drawable/ic_show_chart_black_24dp"
         android:title="@string/title_graph" />
 
     <item
-        android:id="@+id/navigation_notifications"
+        android:id="@+id/navigation_statistics"
         android:icon="@drawable/ic_insert_chart_black_24dp"
         android:title="@string/title_stat" />
 
