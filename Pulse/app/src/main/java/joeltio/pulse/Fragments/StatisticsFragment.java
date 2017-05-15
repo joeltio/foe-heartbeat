@@ -52,6 +52,9 @@ public class StatisticsFragment extends OpenCVFragment {
         this.openCvCameraView =
                 (CameraBridgeViewBase) getActivity().findViewById(R.id.statistics_camera_view);
         this.openCvCameraView.setVisibility(SurfaceView.VISIBLE);
+        this.openCvCameraView.setAlpha(0);
         this.openCvCameraView.setCvCameraViewListener(this);
+
+
     }
 }
