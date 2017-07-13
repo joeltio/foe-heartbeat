@@ -43,8 +43,30 @@ public class GraphFragment extends OpenCVFragment {
     private Timer timer;
 
     private XYPlot xyPlot;
-    private XYSeries series;
-    private LineAndPointFormatter formatter;
+
+    private Double getRedMean(Mat rgbaFrame) {
+        Vector<Mat> planes = new Vector<>();
+        Core.split(rgbaFrame, planes);
+        Mat redPlane = planes.get(0);
+        return Core.mean(redPlane).val[0];
+    }
+
+    private void redrawGraph(Double[] newVals) {
+        final XYSeries series = new SimpleXYSeries(
+                Arrays.asList(newVals),
+                SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, "Brightness Values");
+        final LineAndPointFormatter formatter =
+                new LineAndPointFormatter(Color.YELLOW, Color.YELLOW, null, null);
+
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                xyPlot.clear();
+                xyPlot.addSeries(series, formatter);
+                xyPlot.redraw();
+            }
+        });
+    }
 
     public GraphFragment() {
         super("OpenCV:GraphFragment");
@@ -70,9 +92,8 @@ public class GraphFragment extends OpenCVFragment {
             this.iteration = 0;
         }
 
-        Vector<Mat> planes = new Vector<>();
-        Core.split(inputFrame.rgba(), planes);
-        this.brightnessValues.add(Core.mean(planes.get(0)).val[0]);
+
+        this.brightnessValues.add(getRedMean(inputFrame.rgba()));
         this.iteration += 1;
 
         Double[] vals = this.brightnessValues.toArray(new Double[this.brightnessValues.size()]);
@@ -87,19 +108,7 @@ public class GraphFragment extends OpenCVFragment {
             }
         }
 
-        series = new SimpleXYSeries(
-                Arrays.asList(vals),
-                SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, "Brightness Values");
-
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                xyPlot.clear();
-                xyPlot.addSeries(series, formatter);
-                xyPlot.redraw();
-            }
-        });
-
+        redrawGraph(vals);
         return null;
     }
 
@@ -123,7 +132,6 @@ public class GraphFragment extends OpenCVFragment {
 
         this.numValuesShown = 50;
         this.xyPlot = (XYPlot) getActivity().findViewById(R.id.graph_plot);
-        this.formatter = new LineAndPointFormatter(Color.YELLOW, Color.YELLOW, null, null);
     }
 
     @Override
