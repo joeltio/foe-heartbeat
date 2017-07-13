@@ -2,7 +2,6 @@ package joeltio.pulse.Fragments;
 
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
 import android.view.SurfaceView;
@@ -19,13 +18,10 @@ import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 
-import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.Locale;
 import java.util.Vector;
 
 import joeltio.pulse.FixedQueue;
@@ -38,9 +34,8 @@ public class GraphFragment extends OpenCVFragment {
 
     private int beats;
     private int iteration;
-
-    private Handler handler;
-    private Timer timer;
+    private double currentBpm;
+    private long sampleStart;
 
     private XYPlot xyPlot;
 
@@ -66,6 +61,19 @@ public class GraphFragment extends OpenCVFragment {
                 xyPlot.redraw();
             }
         });
+    }
+
+    private void updateBpm(final double bpm) {
+        getActivity().runOnUiThread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        TextView bpmTextView =
+                                (TextView) getActivity().findViewById(R.id.bpm_num_textView);
+                        bpmTextView.setText(String.format(Locale.ENGLISH, "%.1f", bpm));
+                    }
+                }
+        );
     }
 
     public GraphFragment() {
@@ -102,6 +110,28 @@ public class GraphFragment extends OpenCVFragment {
             Double min = Collections.min(lastFiveVals);
             if ((max - min) > 60) {
                 this.beats += 1;
+
+                if (this.beats == 1 && this.sampleStart == -1) {
+                    this.sampleStart = System.nanoTime();
+                }
+
+                if (this.beats == 4) {
+                    long now = System.nanoTime();
+                    Long timeElapsedMillis = (now - this.sampleStart)/(1000*1000);
+                    double newBpm = (3*1000*60)/(timeElapsedMillis.doubleValue());
+
+                    if (newBpm > 40 && newBpm < 140) {
+                        if (this.currentBpm != 0) {
+                            this.currentBpm = (this.currentBpm + newBpm)/2;
+                        } else {
+                            this.currentBpm = newBpm;
+                        }
+                        updateBpm(this.currentBpm);
+                    }
+
+                    this.beats = 0;
+                    this.sampleStart = now;
+                }
             }
         }
 
@@ -121,6 +151,9 @@ public class GraphFragment extends OpenCVFragment {
         this.brightnessValues = new FixedQueue<>(50);
         this.iteration = 0;
 
+        this.currentBpm = 0;
+        this.sampleStart = -1;
+
         this.openCvCameraView =
                 (CameraBridgeViewBase) getActivity().findViewById(R.id.graph_camera_view);
         this.openCvCameraView.setVisibility(SurfaceView.VISIBLE);
@@ -128,34 +161,5 @@ public class GraphFragment extends OpenCVFragment {
         this.openCvCameraView.setCvCameraViewListener(this);
 
         this.xyPlot = (XYPlot) getActivity().findViewById(R.id.graph_plot);
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        this.handler = new Handler();
-        this.timer = new Timer();
-
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                handler.post(new Runnable() {
-                    public void run() {
-                        TextView bpmValue =
-                                (TextView) getActivity().findViewById(R.id.bpm_num_textView);
-                        bpmValue.setText(Integer.toString(beats));
-                        beats = 0;
-                    }
-                });
-            }
-        };
-
-        timer.schedule(task, 0, 60*1000);
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        timer.cancel();
     }
 }
