@@ -28,13 +28,13 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 
+import joeltio.pulse.FixedQueue;
 import joeltio.pulse.R;
 
 public class GraphFragment extends OpenCVFragment {
     private CameraBridgeViewBase openCvCameraView;
 
-    private Deque<Double> brightnessValues;
-    private int numValuesShown;
+    private FixedQueue<Double> brightnessValues;
 
     private int beats;
     private int iteration;
@@ -85,18 +85,15 @@ public class GraphFragment extends OpenCVFragment {
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        if (this.brightnessValues.size() == this.numValuesShown) {
-            this.brightnessValues.remove();
-        }
         if (this.iteration == 11) {
             this.iteration = 0;
         }
 
-
         this.brightnessValues.add(getRedMean(inputFrame.rgba()));
         this.iteration += 1;
 
-        Double[] vals = this.brightnessValues.toArray(new Double[this.brightnessValues.size()]);
+        Double[] vals = new Double[this.brightnessValues.size()];
+        this.brightnessValues.copyToArray(vals);
 
         if (this.iteration == 10 && this.brightnessValues.size() > 0) {
             List<Double> lastFiveVals =
@@ -121,7 +118,7 @@ public class GraphFragment extends OpenCVFragment {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        this.brightnessValues = new ArrayDeque<>();
+        this.brightnessValues = new FixedQueue<>(50);
         this.iteration = 0;
 
         this.openCvCameraView =
@@ -130,7 +127,6 @@ public class GraphFragment extends OpenCVFragment {
         this.openCvCameraView.setAlpha(0);
         this.openCvCameraView.setCvCameraViewListener(this);
 
-        this.numValuesShown = 50;
         this.xyPlot = (XYPlot) getActivity().findViewById(R.id.graph_plot);
     }
 
