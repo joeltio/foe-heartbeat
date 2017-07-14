@@ -35,7 +35,7 @@ public class GraphFragment extends OpenCVFragment {
     private int beats;
     private int iteration;
     private double currentBpm;
-    private long sampleStart;
+    private Long sampleStart;
 
     private XYPlot xyPlot;
 
@@ -76,6 +76,14 @@ public class GraphFragment extends OpenCVFragment {
         );
     }
 
+    private boolean hasBeat(Double[] values) {
+        List<Double> l = Arrays.asList(values);
+        Double max = Collections.max(l);
+        Double min = Collections.min(l);
+
+        return (max - min) > 60;
+    }
+
     public GraphFragment() {
         super("OpenCV:GraphFragment");
     }
@@ -93,49 +101,46 @@ public class GraphFragment extends OpenCVFragment {
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        if (this.iteration == 11) {
-            this.iteration = 0;
-        }
-
         this.brightnessValues.add(getRedMean(inputFrame.rgba()));
-        this.iteration += 1;
 
         Double[] vals = new Double[this.brightnessValues.size()];
         this.brightnessValues.copyToArray(vals);
+        redrawGraph(vals);
 
-        if (this.iteration == 10 && this.brightnessValues.size() > 0) {
-            List<Double> lastFiveVals =
-                    Arrays.asList(Arrays.copyOfRange(vals, vals.length-10, vals.length));
-            Double max = Collections.max(lastFiveVals);
-            Double min = Collections.min(lastFiveVals);
-            if ((max - min) > 60) {
-                this.beats += 1;
+        if (this.iteration != 9) {
+            this.iteration += 1;
+            return null;
+        }
 
-                if (this.beats == 1 && this.sampleStart == -1) {
-                    this.sampleStart = System.nanoTime();
-                }
+        this.iteration = 0;
 
-                if (this.beats == 4) {
-                    long now = System.nanoTime();
-                    Long timeElapsedMillis = (now - this.sampleStart)/(1000*1000);
-                    double newBpm = (3*1000*60)/(timeElapsedMillis.doubleValue());
+        Double[] lastTenVals = Arrays.copyOfRange(vals, vals.length-10, vals.length);
+        if (hasBeat(lastTenVals)) {
+            this.beats += 1;
 
-                    if (newBpm > 40 && newBpm < 140) {
-                        if (this.currentBpm != 0) {
-                            this.currentBpm = (this.currentBpm + newBpm)/2;
-                        } else {
-                            this.currentBpm = newBpm;
-                        }
-                        updateBpm(this.currentBpm);
+            if (this.sampleStart == null) {
+                this.sampleStart = System.nanoTime();
+            }
+
+            if (this.beats == 4) {
+                long now = System.nanoTime();
+                Long timeElapsedMillis = (now - this.sampleStart)/(1000*1000);
+                double newBpm = (3*1000*60)/(timeElapsedMillis.doubleValue());
+
+                if (newBpm > 40 && newBpm < 140) {
+                    if (this.currentBpm != 0) {
+                        this.currentBpm = (this.currentBpm + newBpm)/2;
+                    } else {
+                        this.currentBpm = newBpm;
                     }
-
-                    this.beats = 0;
-                    this.sampleStart = now;
+                    updateBpm(this.currentBpm);
                 }
+
+                this.beats = 0;
+                this.sampleStart = now;
             }
         }
 
-        redrawGraph(vals);
         return null;
     }
 
@@ -152,7 +157,7 @@ public class GraphFragment extends OpenCVFragment {
         this.iteration = 0;
 
         this.currentBpm = 0;
-        this.sampleStart = -1;
+        this.sampleStart = null;
 
         this.openCvCameraView =
                 (CameraBridgeViewBase) getActivity().findViewById(R.id.graph_camera_view);
