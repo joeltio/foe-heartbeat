@@ -5,4 +5,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="joeltio.pulse.CalibrateActivity">
+    <fragment
+        android:id="@+id/calibrate_fragment"
+        android:name="joeltio.pulse.Fragments.CalibrateIntroFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 </LinearLayout>
