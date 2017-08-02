@@ -16,6 +16,7 @@
         android:textAppearance="?android:textAppearanceMedium"
         android:text="@string/calibrate_intro_text"/>
     <Button
+        android:id="@+id/calibrate_intro_button"
         android:layout_below="@id/calibrate_intro_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

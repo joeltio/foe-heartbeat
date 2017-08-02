@@ -8,4 +8,7 @@
     <string name="calibrate_intro_text">Hello there!
         \nPlease put your phone onto the cardboard cut-out and begin calibration.</string>
     <string name="calibrate_intro_button">Calibrate</string>
+
+    <string name="calibrate_header_text">Please hold on&#8230;</string>
+    <string name="calibrate_progress_text">Calibrating</string>
 </resources>
