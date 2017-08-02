@@ -27,7 +27,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".CalibrateActivity"></activity>
+        <activity
+            android:name=".CalibrateActivity"
+            android:screenOrientation="portrait"/>
     </application>
 
 </manifest>
