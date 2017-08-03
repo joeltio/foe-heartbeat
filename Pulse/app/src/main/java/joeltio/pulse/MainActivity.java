@@ -1,33 +1,43 @@
 package joeltio.pulse;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.MenuItem;
-import android.view.SurfaceView;
 import android.view.WindowManager;
-
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.LoaderCallbackInterface;
-import org.opencv.android.OpenCVLoader;
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Vector;
 
 import joeltio.pulse.Fragments.CameraFragment;
 import joeltio.pulse.Fragments.GraphFragment;
-import joeltio.pulse.Fragments.StatisticsFragment;
 
 public class MainActivity extends AppCompatActivity
         implements BottomNavigationView.OnNavigationItemSelectedListener {
+
+    private static final int REQUEST_CALIBRATE = 2000;
+
+    private BottomNavigationView bottomNavigationView;
+    private Double meanValue;
+
+    private void startCalibrateActivity() {
+        Intent intent = new Intent(this, CalibrateActivity.class);
+        startActivityForResult(intent, REQUEST_CALIBRATE);
+    }
+
+    private void startGraphFragment(Double meanValue) {
+        Bundle bundle = new Bundle();
+        bundle.putDouble(GraphFragment.ARGUMENT_MEAN_VALUE, meanValue);
+
+        GraphFragment graphFragment = new GraphFragment();
+        graphFragment.setArguments(bundle);
+
+        getFragmentManager().beginTransaction().replace(
+                R.id.content,
+                graphFragment,
+                graphFragment.getTag()
+        ).commit();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,12 +45,26 @@ public class MainActivity extends AppCompatActivity
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_main);
 
-        BottomNavigationView bottomNavigationView = (BottomNavigationView)
-                findViewById(R.id.navigation);
-        bottomNavigationView.setOnNavigationItemSelectedListener(this);
+        this.meanValue = -1.0;
+
+        this.bottomNavigationView = findViewById(R.id.navigation);
+        this.bottomNavigationView.setOnNavigationItemSelectedListener(this);
 
         if (savedInstanceState == null) {
-            bottomNavigationView.setSelectedItemId(R.id.navigation_camera);
+            this.bottomNavigationView.setSelectedItemId(R.id.navigation_camera);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode == RESULT_OK) {
+            Double meanValue = data.getDoubleExtra(CalibrateActivity.EXTRA_MEAN_VALUE, -1);
+            if (meanValue != -1) {
+                this.meanValue = meanValue;
+                this.bottomNavigationView.setSelectedItemId(R.id.navigation_graph);
+            }
         }
     }
 
@@ -57,20 +81,14 @@ public class MainActivity extends AppCompatActivity
                 ).commit();
                 return true;
             case R.id.navigation_graph:
-                GraphFragment graphFragment = new GraphFragment();
-                getFragmentManager().beginTransaction().replace(
-                        R.id.content,
-                        graphFragment,
-                        graphFragment.getTag()
-                ).commit();
+                if (this.meanValue != -1) {
+                    startGraphFragment(this.meanValue);
+                } else {
+                    this.bottomNavigationView.setSelectedItemId(R.id.navigation_calibrate);
+                }
                 return true;
-            case R.id.navigation_statistics:
-                StatisticsFragment statisticsFragment = new StatisticsFragment();
-                getFragmentManager().beginTransaction().replace(
-                        R.id.content,
-                        statisticsFragment,
-                        statisticsFragment.getTag()
-                ).commit();
+            case R.id.navigation_calibrate:
+                startCalibrateActivity();
                 return true;
         }
 
