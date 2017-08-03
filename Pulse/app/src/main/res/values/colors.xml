@@ -9,4 +9,6 @@
     <color name="colorCalibrateSuccessBar">#00FF00</color>
     <color name="colorCalibratePrimary">#2196F3</color>
     <color name="colorCalibrateSecondary">#1976D2</color>
+
+    <color name="colorGraphLine">#ef6c00</color>
 </resources>

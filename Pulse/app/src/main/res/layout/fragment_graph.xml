@@ -6,26 +6,39 @@
         android:id="@+id/graph_camera_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
+    <RelativeLayout
+        android:id="@+id/heart_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true">
+        <ImageView
+            android:id="@+id/imageView_heart"
+            android:src="@mipmap/heart"
+            android:padding="15dp"
+            android:layout_width="165dp"
+            android:layout_height="165dp"
+            android:layout_centerHorizontal="true" />
+        <TextView
+            android:id="@+id/bpm_num_textView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_below="@id/imageView_heart"
+            android:textColor="@color/colorFontPrimaryDark"
+            android:textSize="60sp"
+            android:textAppearance="?android:attr/textAppearanceLarge" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/bpm_num_textView"
+            android:layout_alignBaseline="@id/bpm_num_textView"
+            android:text="@string/text_bpm" />
+    </RelativeLayout>
+
     <com.androidplot.xy.XYPlot
         android:id="@+id/graph_plot"
-        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_alignParentTop="true"
-        android:layout_above="@+id/bpm_num_textView"
-        style="@style/APDefacto" />
-    <TextView
-        android:id="@id/bpm_num_textView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_below="@id/heart_layout"
         android:layout_centerHorizontal="true"
-        android:layout_centerVertical="true"
-        android:textColor="@color/colorFontPrimaryDark"
-        android:textSize="100sp"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_toEndOf="@id/bpm_num_textView"
-        android:layout_alignBaseline="@id/bpm_num_textView"
-        android:text="@string/text_bpm" />
+        style="@style/APDefacto" />
 </RelativeLayout>

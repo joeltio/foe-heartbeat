@@ -1,5 +1,7 @@
 package joeltio.pulse.Fragments;
 
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -7,10 +9,12 @@ import android.view.LayoutInflater;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.androidplot.xy.LineAndPointFormatter;
 import com.androidplot.xy.SimpleXYSeries;
+import com.androidplot.xy.XYGraphWidget;
 import com.androidplot.xy.XYPlot;
 import com.androidplot.xy.XYSeries;
 
@@ -19,8 +23,6 @@ import org.opencv.core.Core;
 import org.opencv.core.Mat;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.Locale;
 import java.util.Vector;
 
@@ -28,13 +30,17 @@ import joeltio.pulse.FixedQueue;
 import joeltio.pulse.R;
 
 public class GraphFragment extends OpenCVFragment {
+    public static final String ARGUMENT_MEAN_VALUE = "joeltio.pulse.Fragments.GraphFragment.ARGUMENT_MEAN_VALUE";
+
     private CameraBridgeViewBase openCvCameraView;
+    private ImageView heartImage;
 
     private FixedQueue<Double> brightnessValues;
 
     private int beats;
-    private int iteration;
+    private boolean upBeat;
     private double currentBpm;
+    private double meanValue;
     private Long sampleStart;
 
     private XYPlot xyPlot;
@@ -46,17 +52,42 @@ public class GraphFragment extends OpenCVFragment {
         return Core.mean(redPlane).val[0];
     }
 
+    private void bounceImage(ImageView imageView) {
+        ObjectAnimator scaleUpX = ObjectAnimator.ofFloat(imageView, "scaleX", 1.1f);
+        ObjectAnimator scaleUpY = ObjectAnimator.ofFloat(imageView, "scaleY", 1.1f);
+        scaleUpX.setDuration(80);
+        scaleUpY.setDuration(80);
+
+        ObjectAnimator scaleDownX = ObjectAnimator.ofFloat(imageView, "scaleX", 1.0f);
+        ObjectAnimator scaleDownY = ObjectAnimator.ofFloat(imageView, "scaleY", 1.0f);
+        scaleDownX.setDuration(80);
+        scaleDownY.setDuration(80);
+
+        AnimatorSet bounceOut = new AnimatorSet();
+        AnimatorSet bounceDown = new AnimatorSet();
+
+        bounceOut.play(scaleUpX).with(scaleUpY);
+        bounceDown.play(scaleDownX).with(scaleDownY).after(bounceOut);
+
+        bounceDown.start();
+    }
+
     private void redrawGraph(Double[] newVals) {
         final XYSeries series = new SimpleXYSeries(
                 Arrays.asList(newVals),
                 SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, "Brightness Values");
         final LineAndPointFormatter formatter =
-                new LineAndPointFormatter(Color.YELLOW, Color.YELLOW, null, null);
+                new LineAndPointFormatter(getResources().getColor(R.color.colorGraphLine), null, null, null);
 
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 xyPlot.clear();
+                xyPlot.getGraph().setDomainGridLinePaint(null);
+                xyPlot.getGraph().setDomainOriginLinePaint(null);
+                xyPlot.getGraph().setRangeGridLinePaint(null);
+                xyPlot.getGraph().setRangeOriginLinePaint(null);
+                xyPlot.getLegend().setVisible(false);
                 xyPlot.addSeries(series, formatter);
                 xyPlot.redraw();
             }
@@ -68,20 +99,11 @@ public class GraphFragment extends OpenCVFragment {
                 new Runnable() {
                     @Override
                     public void run() {
-                        TextView bpmTextView =
-                                (TextView) getActivity().findViewById(R.id.bpm_num_textView);
+                        TextView bpmTextView = getActivity().findViewById(R.id.bpm_num_textView);
                         bpmTextView.setText(String.format(Locale.ENGLISH, "%.1f", bpm));
                     }
                 }
         );
-    }
-
-    private boolean hasBeat(Double[] values) {
-        List<Double> l = Arrays.asList(values);
-        Double max = Collections.max(l);
-        Double min = Collections.min(l);
-
-        return (max - min) > 60;
     }
 
     public GraphFragment() {
@@ -101,44 +123,41 @@ public class GraphFragment extends OpenCVFragment {
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        this.brightnessValues.add(getRedMean(inputFrame.rgba()));
+        Double frameValue = getRedMean(inputFrame.rgba());
+        this.brightnessValues.add(frameValue);
 
         Double[] vals = new Double[this.brightnessValues.size()];
         this.brightnessValues.copyToArray(vals);
         redrawGraph(vals);
 
-        if (this.iteration != 9) {
-            this.iteration += 1;
-            return null;
-        }
-
-        this.iteration = 0;
-
-        Double[] lastTenVals = Arrays.copyOfRange(vals, vals.length-10, vals.length);
-        if (hasBeat(lastTenVals)) {
+        if (frameValue > (30 + this.meanValue)) {
+            this.upBeat = true;
+        } else if (this.upBeat) {
             this.beats += 1;
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    bounceImage(heartImage);
+                }
+            });
 
-            if (this.sampleStart == null) {
+            if (this.beats == 1) {
                 this.sampleStart = System.nanoTime();
-            }
+            } else if (this.beats == 4) {
+                double timeTaken = (System.nanoTime()-this.sampleStart)/3;
+                double newBpm = (60*Math.pow(10, 9))/timeTaken;
 
-            if (this.beats == 4) {
-                long now = System.nanoTime();
-                Long timeElapsedMillis = (now - this.sampleStart)/(1000*1000);
-                double newBpm = (3*1000*60)/(timeElapsedMillis.doubleValue());
-
-                if (newBpm > 40 && newBpm < 140) {
-                    if (this.currentBpm != 0) {
-                        this.currentBpm = (this.currentBpm + newBpm)/2;
-                    } else {
-                        this.currentBpm = newBpm;
-                    }
-                    updateBpm(this.currentBpm);
+                if (this.currentBpm == 0) {
+                    this.currentBpm = newBpm;
+                } else {
+                    this.currentBpm = (this.currentBpm + newBpm)/2;
                 }
 
                 this.beats = 0;
-                this.sampleStart = now;
+                updateBpm(this.currentBpm);
             }
+
+            this.upBeat = false;
         }
 
         return null;
@@ -147,6 +166,7 @@ public class GraphFragment extends OpenCVFragment {
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+        this.meanValue = getArguments().getDouble(ARGUMENT_MEAN_VALUE);
         return inflater.inflate(R.layout.fragment_graph, container, false);
     }
 
@@ -154,17 +174,25 @@ public class GraphFragment extends OpenCVFragment {
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         this.brightnessValues = new FixedQueue<>(50);
-        this.iteration = 0;
 
+        this.upBeat = false;
         this.currentBpm = 0;
         this.sampleStart = null;
 
-        this.openCvCameraView =
-                (CameraBridgeViewBase) getActivity().findViewById(R.id.graph_camera_view);
+        this.heartImage = getActivity().findViewById(R.id.imageView_heart);
+
+        this.openCvCameraView = getActivity().findViewById(R.id.graph_camera_view);
         this.openCvCameraView.setVisibility(SurfaceView.VISIBLE);
         this.openCvCameraView.setAlpha(0);
         this.openCvCameraView.setCvCameraViewListener(this);
 
-        this.xyPlot = (XYPlot) getActivity().findViewById(R.id.graph_plot);
+        this.xyPlot = getActivity().findViewById(R.id.graph_plot);
+        this.xyPlot.setBackgroundPaint(null);
+        this.xyPlot.getGraph().setBackgroundPaint(null);
+        this.xyPlot.getGraph().setGridBackgroundPaint(null);
+        this.xyPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM)
+                .getPaint().setColor(Color.TRANSPARENT);
+        this.xyPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.LEFT)
+                .getPaint().setColor(Color.TRANSPARENT);
     }
 }
