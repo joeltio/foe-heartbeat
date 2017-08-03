@@ -36,12 +36,9 @@ public class CalibrateActivity extends AppCompatActivity {
     }
 
     public void stopCalibration(Double meanValue) {
-        startNextActivity(meanValue);
-    }
-
-    private void startNextActivity(Double meanValue) {
-        Intent intent = new Intent(this, MainActivity.class);
+        Intent intent = new Intent();
         intent.putExtra(EXTRA_MEAN_VALUE, meanValue);
-        startActivity(intent);
+        setResult(RESULT_OK, intent);
+        finish();
     }
 }
