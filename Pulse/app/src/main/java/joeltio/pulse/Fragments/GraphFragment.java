@@ -130,9 +130,9 @@ public class GraphFragment extends OpenCVFragment {
         this.brightnessValues.copyToArray(vals);
         redrawGraph(vals);
 
-        if (frameValue > (30 + this.meanValue)) {
+        if (frameValue > (20 + this.meanValue)) {
             this.upBeat = true;
-        } else if (this.upBeat) {
+        } else if (this.upBeat && (frameValue < (2 + this.meanValue))) {
             this.beats += 1;
             getActivity().runOnUiThread(new Runnable() {
                 @Override
